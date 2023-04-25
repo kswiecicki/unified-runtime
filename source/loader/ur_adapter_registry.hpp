@@ -74,13 +74,12 @@ class AdapterRegistry {
 
     size_t size() const noexcept { return discovered_adapters.size(); }
 
-    const Iterator begin() const noexcept {
-        return Iterator(&(*discovered_adapters.cbegin()));
+    std::vector<std::string>::const_iterator begin() const noexcept {
+        return discovered_adapters.begin();
     }
 
-    const Iterator end() const noexcept {
-        return Iterator(&(*discovered_adapters.cbegin()) +
-                        discovered_adapters.size());
+    std::vector<std::string>::const_iterator end() const noexcept {
+        return discovered_adapters.end();
     }
 
   private:
