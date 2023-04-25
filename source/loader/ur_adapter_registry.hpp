@@ -9,32 +9,33 @@
 #define UR_ADAPTER_REGISTRY_HPP 1
 
 #include <array>
+#include <filesystem>
 
 #include "logger/ur_logger.hpp"
+#include "ur_loader_location.hpp"
 #include "ur_util.hpp"
+
+namespace fs = std::filesystem;
 
 namespace ur_loader {
 
 class AdapterRegistry {
   public:
     AdapterRegistry() {
-        std::optional<std::string> altPlatforms;
-
-        // UR_ADAPTERS_FORCE_LOAD  is for development/debug only
+        std::optional<std::vector<std::string>> forceLoadedAdaptersOpt;
         try {
-            altPlatforms = ur_getenv("UR_ADAPTERS_FORCE_LOAD");
+            forceLoadedAdaptersOpt = getenv_to_vec("UR_ADAPTERS_FORCE_LOAD");
         } catch (const std::invalid_argument &e) {
             logger::error(e.what());
         }
-        if (!altPlatforms) {
-            discoverKnownAdapters();
+
+        if (forceLoadedAdaptersOpt.has_value()) {
+            auto forceLoadedAdapters = forceLoadedAdaptersOpt.value();
+            discovered_adapters.insert(discovered_adapters.end(),
+                                       forceLoadedAdapters.begin(),
+                                       forceLoadedAdapters.end());
         } else {
-            std::stringstream ss(*altPlatforms);
-            while (ss.good()) {
-                std::string substr;
-                getline(ss, substr, ',');
-                discovered_adapters.emplace_back(substr);
-            }
+            discoverKnownAdapters();
         }
     }
 
@@ -88,9 +89,64 @@ class AdapterRegistry {
     static constexpr std::array<const char *, 1> knownPlatformNames{
         MAKE_LIBRARY_NAME("ur_adapter_level_zero", "0")};
 
+    std::optional<std::vector<fs::path>> getEnvAdapterSearchPaths() {
+        std::optional<std::vector<std::string>> pathStringsOpt;
+        try {
+            pathStringsOpt = getenv_to_vec("UR_ADAPTERS_SEARCH_PATH");
+        } catch (const std::invalid_argument &e) {
+            logger::error(e.what());
+            return std::nullopt;
+        }
+
+        if (pathStringsOpt.has_value()) {
+            std::vector<fs::path> paths;
+            auto pathStrings = pathStringsOpt.value();
+
+            std::transform(pathStrings.cbegin(), pathStrings.cend(),
+                           std::back_inserter(paths),
+                           [](const std::string &s) { return fs::path(s); });
+            paths.erase(std::remove_if(paths.begin(), paths.end(),
+                                       [](const fs::path &path) {
+                                           return !fs::exists(path);
+                                       }),
+                        paths.end());
+
+            if (!paths.empty()) {
+                return paths;
+            }
+        }
+
+        return std::nullopt;
+    }
+
     void discoverKnownAdapters() {
-        for (const auto &path : knownPlatformNames) {
-            discovered_adapters.emplace_back(path);
+        std::vector<fs::path> searchPaths;
+
+        auto searchPathsEnvOpt = getEnvAdapterSearchPaths();
+        if (searchPathsEnvOpt.has_value()) {
+            auto searchPathsEnv = searchPathsEnvOpt.value();
+            std::copy(searchPathsEnv.begin(), searchPathsEnv.end(),
+                      std::back_inserter(searchPaths));
+        }
+
+        auto searchPathsOSOpt = getOSSearchPaths();
+        if (searchPathsOSOpt.has_value()) {
+            auto searchPathsOS = searchPathsOSOpt.value();
+            std::copy(searchPathsOS.begin(), searchPathsOS.end(),
+                      std::back_inserter(searchPaths));
+        }
+
+        for (const auto &platformName : knownPlatformNames) {
+            auto platformExists = [&platformName](const auto &path) {
+                return fs::exists(path / platformName);
+            };
+
+            auto it = std::find_if(searchPaths.begin(), searchPaths.end(),
+                                   platformExists);
+            if (it != searchPaths.end()) {
+                auto fullPath = *it / platformName;
+                discovered_adapters.emplace_back(fullPath.string());
+            }
         }
     }
 };
