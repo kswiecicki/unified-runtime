@@ -260,6 +260,11 @@ Specific environment variables can be set to control the behavior of unified run
 
     This environment variable should be used for development and debugging only.
 
+.. envvar:: UR_ADAPTERS_SEARCH_PATH
+
+   Holds a comma-separated list of directory paths used for adapter discovery. By setting this value you can extend
+   the list of directories the loader searches for adapter implementations.
+
 .. envvar:: UR_ENABLE_VALIDATION_LAYER
 
    Holds the value ``0`` or ``1``. By setting it to ``1`` you enable validation layer.
