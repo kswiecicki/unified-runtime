@@ -18,12 +18,11 @@ target_include_directories(ur_common PUBLIC
 
 message(STATUS "Download Unified Memory Framework from github.com")
 if (NOT DEFINED UMF_REPO)
-    set(UMF_REPO "https://github.com/oneapi-src/unified-memory-framework.git")
+    set(UMF_REPO "https://github.com/kswiecicki/unified-memory-framework.git") # TODO: Restore repo.
 endif()
 
 if (NOT DEFINED UMF_TAG)
-    # Merge pull request #571 from KFilipek/print_cmake_formatting_error
-    set(UMF_TAG dca215714f1fe896081846f1e028d634a03ef3eb)
+    set(UMF_TAG 6ecffbe4b5ee365434b9cc0f8f1f1df091692900) # TODO: Set appropriate tag.
 endif()
 
 message(STATUS "Will fetch Unified Memory Framework from ${UMF_REPO}")
