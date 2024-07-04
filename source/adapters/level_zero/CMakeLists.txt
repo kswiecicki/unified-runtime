@@ -80,20 +80,30 @@ add_library (LevelZeroLoader INTERFACE)
 get_filename_component(LEVEL_ZERO_LIBRARY_SRC "${LEVEL_ZERO_LIBRARY}" DIRECTORY)
 get_filename_component(LEVEL_ZERO_LIB_NAME "${LEVEL_ZERO_LIBRARY}" NAME)
 target_link_directories(LevelZeroLoader
-    INTERFACE "${LEVEL_ZERO_LIBRARY_SRC}"
+    INTERFACE "$<BUILD_INTERFACE:${LEVEL_ZERO_LIBRARY_SRC}>"
+              "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 target_link_libraries(LevelZeroLoader
     INTERFACE "${LEVEL_ZERO_LIB_NAME}"
 )
 
-add_library (LevelZeroLoader-Headers INTERFACE)
+add_library(LevelZeroLoader-Headers INTERFACE)
 target_include_directories(LevelZeroLoader-Headers
-    INTERFACE "${LEVEL_ZERO_INCLUDE_DIR}"
+    INTERFACE "$<BUILD_INTERFACE:${LEVEL_ZERO_INCLUDE_DIR}>"
+              "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+)
+# Suppress C4996 warning in level zero loader headers
+target_compile_options(LevelZeroLoader-Headers INTERFACE
+    $<$<CXX_COMPILER_ID:MSVC>:/wd4996>
 )
 
 if(UR_BUILD_ADAPTER_L0)
-    add_ur_adapter(ur_adapter_level_zero
-        SHARED
+    set(ADAPTER_LIB_TYPE SHARED)
+    if(UR_STATIC_ADAPTER_L0)
+        set(ADAPTER_LIB_TYPE STATIC)
+    endif()
+
+    add_ur_adapter(ur_adapter_level_zero ${ADAPTER_LIB_TYPE}
         ${CMAKE_CURRENT_SOURCE_DIR}/ur_interface_loader.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/adapter.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/adapter.cpp
@@ -134,6 +144,16 @@ if(UR_BUILD_ADAPTER_L0)
         ${CMAKE_CURRENT_SOURCE_DIR}/helpers/kernel_helpers.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../../ur/ur.cpp
     )
+
+    if(UR_STATIC_ADAPTER_L0)
+        target_compile_definitions(ur_adapter_level_zero PUBLIC UR_STATIC_ADAPTER_LEVEL_ZERO)
+        install(TARGETS ur_adapter_level_zero ur_umf LevelZeroLoader LevelZeroLoader-Headers ze_loader utils
+            EXPORT ${PROJECT_NAME}-targets
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        )
+    endif()
 
     if(NOT WIN32)
         target_sources(ur_adapter_level_zero
