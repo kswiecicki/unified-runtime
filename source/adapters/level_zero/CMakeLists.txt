@@ -86,6 +86,10 @@ target_link_directories(LevelZeroLoader
 target_link_libraries(LevelZeroLoader
     INTERFACE "${LEVEL_ZERO_LIB_NAME}"
 )
+# Suppress C4996 warning in level zero loader sources
+target_compile_options(LevelZeroLoader-Headers INTERFACE
+    $<$<CXX_COMPILER_ID:MSVC>:/wd4996>
+)
 
 add_library(LevelZeroLoader-Headers INTERFACE)
 target_include_directories(LevelZeroLoader-Headers
