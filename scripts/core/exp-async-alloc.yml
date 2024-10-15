@@ -41,16 +41,16 @@ name: $x_command_t
 etors:
     - name: ENQUEUE_USM_DEVICE_ALLOC_EXP
       value: "0x2008"
-      desc: Event created by $xEnqueueDeviceAllocExp
+      desc: Event created by $xEnqueueUSMDeviceAllocExp
     - name: ENQUEUE_USM_SHARED_ALLOC_EXP
       value: "0x2010"
-      desc: Event created by $xEnqueueSharedAllocExp
+      desc: Event created by $xEnqueueUSMSharedAllocExp
     - name: ENQUEUE_USM_HOST_ALLOC_EXP
       value: "0x2011"
-      desc: Event created by $xEnqueueHostAllocExp
+      desc: Event created by $xEnqueueUSMHostAllocExp
     - name: ENQUEUE_USM_FREE_EXP
       value: "0x2012"
-      desc: Event created by $xEnqueueFreeExp
+      desc: Event created by $xEnqueueUSMFreeExp
 
 --- #--------------------------------------------------------------------------
 type: enum
