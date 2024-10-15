@@ -5776,10 +5776,10 @@ typedef enum ur_command_t {
     UR_COMMAND_EXTERNAL_SEMAPHORE_SIGNAL_EXP = 0x2001, ///< Event created by ::urBindlessImagesSignalExternalSemaphoreExp
     UR_COMMAND_TIMESTAMP_RECORDING_EXP = 0x2002,       ///< Event created by ::urEnqueueTimestampRecordingExp
     UR_COMMAND_ENQUEUE_NATIVE_EXP = 0x2004,            ///< Event created by ::urEnqueueNativeCommandExp
-    UR_COMMAND_ENQUEUE_USM_DEVICE_ALLOC_EXP = 0x2008,  ///< Event created by ::urEnqueueDeviceAllocExp
-    UR_COMMAND_ENQUEUE_USM_SHARED_ALLOC_EXP = 0x2010,  ///< Event created by ::urEnqueueSharedAllocExp
-    UR_COMMAND_ENQUEUE_USM_HOST_ALLOC_EXP = 0x2011,    ///< Event created by ::urEnqueueHostAllocExp
-    UR_COMMAND_ENQUEUE_USM_FREE_EXP = 0x2012,          ///< Event created by ::urEnqueueFreeExp
+    UR_COMMAND_ENQUEUE_USM_DEVICE_ALLOC_EXP = 0x2008,  ///< Event created by ::urEnqueueUSMDeviceAllocExp
+    UR_COMMAND_ENQUEUE_USM_SHARED_ALLOC_EXP = 0x2010,  ///< Event created by ::urEnqueueUSMSharedAllocExp
+    UR_COMMAND_ENQUEUE_USM_HOST_ALLOC_EXP = 0x2011,    ///< Event created by ::urEnqueueUSMHostAllocExp
+    UR_COMMAND_ENQUEUE_USM_FREE_EXP = 0x2012,          ///< Event created by ::urEnqueueUSMFreeExp
     /// @cond
     UR_COMMAND_FORCE_UINT32 = 0x7fffffff
     /// @endcond
