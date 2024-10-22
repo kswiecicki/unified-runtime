@@ -4,31 +4,129 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include <uur/fixtures.h>
+struct urL0EnqueueAllocTest : uur::urKernelExecutionTest {
+    void ValidateEnqueueFree(void *ptr, ur_usm_pool_handle_t pool = nullptr) {
+        ur_event_handle_t freeEvent = nullptr;
+        ASSERT_NE(ptr, nullptr);
+        ASSERT_SUCCESS(urEnqueueUSMFreeExp(queue, pool, ptr, 0, nullptr, &freeEvent));
+        ASSERT_SUCCESS(urQueueFinish(queue));
+        ASSERT_NE(freeEvent, nullptr);
+    }
 
-using urL0EnqueueAllocTest = uur::urQueueTest;
+    static constexpr size_t ARRAY_SIZE = 16;
+    static constexpr uint32_t DATA = 0xC0FFEE;
+};
 UUR_INSTANTIATE_DEVICE_TEST_SUITE_P(urL0EnqueueAllocTest);
 
-TEST_P(urL0EnqueueAllocTest, SuccessHostAlloc) {
+TEST_P(urL0EnqueueAllocTest, SuccessHostDirectAlloc) {
     ur_device_usm_access_capability_flags_t hostUSMSupport = 0;
     ASSERT_SUCCESS(uur::GetDeviceUSMHostSupport(device, hostUSMSupport));
     if (!hostUSMSupport) {
         GTEST_SKIP() << "Host USM is not supported.";
     }
 
-    void *Ptr = nullptr;
-    size_t allocSize = sizeof(int);
-    ur_event_handle_t AllocEvent = nullptr;
-    ASSERT_SUCCESS(urEnqueueUSMHostAllocExp(queue, nullptr, allocSize, nullptr,
-                                            0, nullptr, &Ptr, &AllocEvent));
+    void *ptr = nullptr;
+    ur_event_handle_t allocEvent = nullptr;
+    ASSERT_SUCCESS(urEnqueueUSMHostAllocExp(queue, nullptr, sizeof(int), nullptr,
+                                            0, nullptr, &ptr, &allocEvent));
     ASSERT_SUCCESS(urQueueFinish(queue));
-    ASSERT_NE(Ptr, nullptr);
-    ASSERT_NE(AllocEvent, nullptr);
+    ASSERT_NE(ptr, nullptr);
+    ASSERT_NE(allocEvent, nullptr);
+    *(int *)ptr = DATA;
+    ValidateEnqueueFree(ptr);
+}
 
-    *(int *)Ptr = 0xC0FFEE;
+TEST_P(urL0EnqueueAllocTest, SuccessHostPoolAlloc) {
+    ur_device_usm_access_capability_flags_t hostUSMSupport = 0;
+    ASSERT_SUCCESS(uur::GetDeviceUSMHostSupport(device, hostUSMSupport));
+    if (!hostUSMSupport) {
+        GTEST_SKIP() << "Host USM is not supported.";
+    }
 
-    ur_event_handle_t FreeEvent = nullptr;
+    ur_usm_pool_handle_t pool = nullptr; 
+    ASSERT_SUCCESS(urUSMPoolCreate(context, nullptr, &pool));
+
+    void *ptr = nullptr;
+    ur_event_handle_t allocEvent = nullptr;
+    ASSERT_SUCCESS(urEnqueueUSMHostAllocExp(queue, pool, sizeof(uint32_t), nullptr,
+                                            0, nullptr, &ptr, &allocEvent));
+    ASSERT_SUCCESS(urQueueFinish(queue));
+    ASSERT_NE(ptr, nullptr);
+    ASSERT_NE(allocEvent, nullptr);
+    *static_cast<uint32_t *>(ptr) = DATA;
+    ValidateEnqueueFree(ptr, pool);
+}
+
+TEST_P(urL0EnqueueAllocTest, SuccessDeviceAlloc) {
+    ur_device_usm_access_capability_flags_t deviceUSMSupport = 0;
+    ASSERT_SUCCESS(uur::GetDeviceUSMDeviceSupport(device, deviceUSMSupport));
+    if (!(deviceUSMSupport & UR_DEVICE_USM_ACCESS_CAPABILITY_FLAG_ACCESS)) {
+        GTEST_SKIP() << "Device USM is not supported.";
+    }
+    
+    ur_usm_pool_handle_t pool = nullptr; 
+    urUSMPoolCreate(context, nullptr, &pool);
+
+    void *ptr = nullptr;
+    ur_event_handle_t allocEvent = nullptr;
+    ASSERT_SUCCESS(urEnqueueUSMDeviceAllocExp(queue, pool, ARRAY_SIZE * sizeof(uint32_t), 
+                                              nullptr, 0, nullptr, &ptr, &allocEvent));
+    ASSERT_NE(ptr, nullptr);
+    ASSERT_NE(allocEvent, nullptr);
+    ASSERT_SUCCESS(urKernelSetArgPointer(kernel, 0, nullptr, ptr));
+    ASSERT_SUCCESS(urKernelSetArgValue(kernel, 1, sizeof(DATA), nullptr, &DATA));
+    Launch1DRange(ARRAY_SIZE);
+    ValidateEnqueueFree(ptr, pool);
+}
+
+TEST_P(urL0EnqueueAllocTest, SuccessDeviceRepeatAlloc) {
+    ur_device_usm_access_capability_flags_t deviceUSMSupport = 0;
+    ASSERT_SUCCESS(uur::GetDeviceUSMDeviceSupport(device, deviceUSMSupport));
+    if (!(deviceUSMSupport & UR_DEVICE_USM_ACCESS_CAPABILITY_FLAG_ACCESS)) {
+        GTEST_SKIP() << "Device USM is not supported.";
+    }
+    
+    ur_usm_pool_handle_t pool = nullptr; 
+    urUSMPoolCreate(context, nullptr, &pool);
+
+    void *ptr = nullptr;
+    ASSERT_SUCCESS(urEnqueueUSMDeviceAllocExp(queue, pool, ARRAY_SIZE * sizeof(uint32_t), 
+                                              nullptr, 0, nullptr, &ptr, nullptr));
+    ASSERT_NE(ptr, nullptr);
+    ASSERT_SUCCESS(urKernelSetArgPointer(kernel, 0, nullptr, ptr));
+    ASSERT_SUCCESS(urKernelSetArgValue(kernel, 1, sizeof(DATA), nullptr, &DATA));
+    Launch1DRange(ARRAY_SIZE);
+    ASSERT_SUCCESS(urEnqueueUSMFreeExp(queue, pool, ptr, 0, nullptr, nullptr));
+
+    void *ptr2 = nullptr;
+    ASSERT_SUCCESS(urEnqueueUSMDeviceAllocExp(queue, pool, ARRAY_SIZE * sizeof(uint32_t), 
+                                              nullptr, 0, nullptr, &ptr2, nullptr));
+    ASSERT_NE(ptr, nullptr);
+    ASSERT_SUCCESS(urKernelSetArgPointer(kernel, 0, nullptr, ptr2));
+    ASSERT_SUCCESS(urKernelSetArgValue(kernel, 1, sizeof(DATA), nullptr, &DATA));
+    Launch1DRange(ARRAY_SIZE);
+    ValidateEnqueueFree(ptr2, pool);
+}
+
+TEST_P(urL0EnqueueAllocTest, SuccessSharedAlloc) {
+    ur_device_usm_access_capability_flags_t sharedUSMSupport = 0;
     ASSERT_SUCCESS(
-        urEnqueueUSMFreeExp(queue, nullptr, Ptr, 0, nullptr, &FreeEvent));
-    ASSERT_SUCCESS(urQueueFinish(queue));
-    ASSERT_NE(FreeEvent, nullptr);
+        uur::GetDeviceUSMSingleSharedSupport(device, sharedUSMSupport));
+    if (!(sharedUSMSupport & UR_DEVICE_USM_ACCESS_CAPABILITY_FLAG_ACCESS)) {
+        GTEST_SKIP() << "Shared USM is not supported.";
+    }
+
+    ur_usm_pool_handle_t pool = nullptr; 
+    urUSMPoolCreate(context, nullptr, &pool);
+
+    void *ptr = nullptr;
+    ur_event_handle_t allocEvent = nullptr;
+    ASSERT_SUCCESS(urEnqueueUSMSharedAllocExp(queue, pool, ARRAY_SIZE * sizeof(uint32_t), 
+                                              nullptr, 0, nullptr, &ptr, &allocEvent));
+    ASSERT_NE(ptr, nullptr);
+    ASSERT_NE(allocEvent, nullptr);
+    ASSERT_SUCCESS(urKernelSetArgPointer(kernel, 0, nullptr, ptr));
+    ASSERT_SUCCESS(urKernelSetArgValue(kernel, 1, sizeof(DATA), nullptr, &DATA));
+    Launch1DRange(ARRAY_SIZE);
+    ValidateEnqueueFree(ptr, pool);
 }
