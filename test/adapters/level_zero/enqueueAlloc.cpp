@@ -65,7 +65,7 @@ TEST_P(urL0EnqueueAllocTest, SuccessDeviceAlloc) {
     }
     
     ur_usm_pool_handle_t pool = nullptr; 
-    urUSMPoolCreate(context, nullptr, &pool);
+    ASSERT_SUCCESS(urUSMPoolCreate(context, nullptr, &pool));
 
     void *ptr = nullptr;
     ur_event_handle_t allocEvent = nullptr;
@@ -87,7 +87,7 @@ TEST_P(urL0EnqueueAllocTest, SuccessDeviceRepeatAlloc) {
     }
     
     ur_usm_pool_handle_t pool = nullptr; 
-    urUSMPoolCreate(context, nullptr, &pool);
+    ASSERT_SUCCESS(urUSMPoolCreate(context, nullptr, &pool));
 
     void *ptr = nullptr;
     ASSERT_SUCCESS(urEnqueueUSMDeviceAllocExp(queue, pool, ARRAY_SIZE * sizeof(uint32_t), 
@@ -117,7 +117,7 @@ TEST_P(urL0EnqueueAllocTest, SuccessSharedAlloc) {
     }
 
     ur_usm_pool_handle_t pool = nullptr; 
-    urUSMPoolCreate(context, nullptr, &pool);
+    ASSERT_SUCCESS(urUSMPoolCreate(context, nullptr, &pool));
 
     void *ptr = nullptr;
     ur_event_handle_t allocEvent = nullptr;
