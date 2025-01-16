@@ -96,6 +96,18 @@ function(add_adapter_tests adapter)
         target_link_libraries(test-adapter-${adapter}_ipc PRIVATE
             ur_umf
         )
+
+        add_adapter_test(${adapter}_enqueue_alloc_no_kernels
+            FIXTURE DEVICES
+            SOURCES
+                enqueue_alloc_no_kernels.cpp
+            ENVIRONMENT
+                "UR_ADAPTERS_FORCE_LOAD=\"$<TARGET_FILE:ur_adapter_${adapter}>\""
+        )
+
+        target_link_libraries(test-adapter-${adapter}_enqueue_alloc_no_kernels PRIVATE
+            ur_umf
+        )
     endif()
 
     add_adapter_test(${adapter}_mem_buffer_map
