@@ -665,7 +665,12 @@ static ur_result_t enqueueUSMAllocHelper(
   // Signal that USM allocation event was finished
   ZE2UR_CALL(zeCommandListAppendSignalEvent, (CommandList->first, ZeEvent));
 
+  logger::debug("enqueueUSMAllocHelper: signaling that an enqueued allocation "
+                "was finished");
+
   UR_CALL(Queue->executeCommandList(CommandList, false, OkToBatch));
+
+  logger::debug("enqueueUSMAllocHelper: resumed the queue execution");
 
   return UR_RESULT_SUCCESS;
 }
@@ -788,19 +793,31 @@ ur_result_t urEnqueueUSMFreeExp(
   if (WaitList.Length) {
     ZE2UR_CALL(zeCommandListAppendWaitOnEvents,
                (ZeCommandList, WaitList.Length, WaitList.ZeEventList));
+
+    logger::debug(
+        "urEnqueueUSMFreeExp: waiting for the events in event wait list");
+
+    // Wait for commands execution until USM can be freed
+    UR_CALL(
+        Queue->executeCommandList(CommandList, true, OkToBatch)); // Blocking
   }
 
-  // Wait for commands execution until USM can be freed
-  UR_CALL(Queue->executeCommandList(CommandList, true, OkToBatch)); // Blocking
+  logger::debug("urEnqueueUSMFreeExp: attempting to free ptr {}", Mem);
 
   // Free USM memory
+
   auto Ret = USMFreeHelper(Queue->Context, Mem);
   if (Ret) {
     return Ret;
   }
 
+  logger::debug("urEnqueueUSMFreeExp: ptr {} was freed", Mem);
+
   // Signal that USM free event was finished
   ZE2UR_CALL(zeCommandListAppendSignalEvent, (ZeCommandList, ZeEvent));
+
+  logger::debug("urEnqueueUSMFreeExp: signaling that an enqueued free "
+                "was finished");
 
   UR_CALL(Queue->executeCommandList(CommandList, false, OkToBatch));
 
@@ -1210,6 +1227,10 @@ ur_result_t ur_usm_pool_handle_t_::allocate(ur_context_handle_t Context,
         umfPool);
     return umf::umf2urResult(umfRet);
   }
+
+  logger::debug(
+      "enqueueUSMAllocHelper: obtained an allocation from the UMF pool {}",
+      umfPool);
 
   if (IndirectAccessTrackingEnabled) {
     // Keep track of all memory allocations in the context
